@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014 The foocsim Authors
+// Copyright (c) 2014 The buffercache Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,40 +16,43 @@
 package buffercache
 
 import (
-	"errors"
 	"github.com/lpabon/godbc"
 	"sync"
 )
 
-type BufferCacheBlock struct {
+type ClockCacheBlock struct {
 	key  uint64
 	mru  bool
 	used bool
 	data []byte
 }
 
-type BufferCache struct {
-	cacheblocks []BufferCacheBlock
+type ClockCache struct {
+	cacheblocks []ClockCacheBlock
 	keymap      map[uint64]uint64
 	index       uint64
 	lock        sync.Mutex
 }
 
-func NewBufferCache(cachesize, blocksize uint64) *BufferCache {
+func NewClockCache(cachesize, blocksize uint64) *ClockCache {
 
-	b := &BufferCache{}
+	b := &ClockCache{}
 	numblocks := cachesize / blocksize
-	b.cacheblocks = make([]BufferCacheBlock, numblocks)
+	b.cacheblocks = make([]ClockCacheBlock, numblocks)
 	b.keymap = make(map[uint64]uint64)
 
 	for i := 0; i < len(b.cacheblocks); i++ {
 		b.cacheblocks[i].data = make([]byte, blocksize)
+		godbc.Check(b.cacheblocks[i].data != nil)
 	}
+
+	godbc.Ensure(b.cacheblocks != nil)
+	godbc.Ensure(b.keymap != nil)
 
 	return b
 }
 
-func (c *BufferCache) remove(index uint64) {
+func (c *ClockCache) remove(index uint64) {
 	delete(c.keymap, c.cacheblocks[index].key)
 
 	c.cacheblocks[index].mru = false
@@ -57,7 +60,7 @@ func (c *BufferCache) remove(index uint64) {
 	c.cacheblocks[index].key = 0
 }
 
-func (c *BufferCache) Set(key uint64, buf []byte) (err error) {
+func (c *ClockCache) Set(key uint64, buf []byte) (err error) {
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -80,7 +83,7 @@ func (c *BufferCache) Set(key uint64, buf []byte) (err error) {
 				err = nil
 
 				c.cacheblocks[c.index].key = key
-				c.cacheblocks[c.index].mru = true
+				c.cacheblocks[c.index].mru = false
 				c.cacheblocks[c.index].used = true
 
 				godbc.Check(len(buf) == len(c.cacheblocks[c.index].data))
@@ -96,7 +99,7 @@ func (c *BufferCache) Set(key uint64, buf []byte) (err error) {
 	}
 }
 
-func (c *BufferCache) Get(key uint64, buf []byte) (err error) {
+func (c *ClockCache) Get(key uint64, buf []byte) (err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if index, ok := c.keymap[key]; ok {
@@ -109,11 +112,13 @@ func (c *BufferCache) Get(key uint64, buf []byte) (err error) {
 	}
 }
 
-func (c *BufferCache) Invalidate(key uint64) (err error) {
+func (c *ClockCache) Invalidate(key uint64) (err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if index, ok := c.keymap[key]; ok {
 		c.remove(index)
 	}
+
+	return nil
 }

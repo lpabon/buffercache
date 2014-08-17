@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014 The foocsim Authors
+// Copyright (c) 2014 The buffercache Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,10 @@
 // limitations under the License.
 
 package buffercache
+
+import (
+	"errors"
+)
 
 var (
 	ErrKeyNotFound = errors.New("Key not found")
