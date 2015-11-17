@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/lpabon/buffercache.svg)](https://travis-ci.org/lpabon/buffercache)
+
 buffercache
 ===========
 
